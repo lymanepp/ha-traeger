@@ -1,5 +1,5 @@
 {
-    "name": "njobrien1006/hass_traeger",
+    "name": "lymanepp/ha-traeger",
     //Change Me for different CodeSpace Python Version
     "image": "mcr.microsoft.com/devcontainers/python:0-3.11-bullseye",
     "postCreateCommand": "scripts/setup",

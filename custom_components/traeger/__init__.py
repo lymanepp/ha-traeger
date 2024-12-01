@@ -2,7 +2,7 @@
 Custom integration to integrate traeger with Home Assistant.
 
 For more details about this integration, please refer to
-https://github.com/njobrien1006/hass_traeger
+https://github.com/lymanepp/ha-traeger
 """
 import asyncio
 import logging

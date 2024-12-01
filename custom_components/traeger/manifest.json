@@ -7,11 +7,12 @@
     "@noelbundick",
     "@sebirdman",
     "@stephenpapierski",
-    "@Velines"
+    "@Velines",
+    "@lymanepp"
   ],
   "config_flow": true,
-  "documentation": "https://github.com/njobrien1006/hass_traeger",
+  "documentation": "https://github.com/lymanepp/ha-traeger",
   "iot_class": "cloud_push",
-  "issue_tracker": "https://github.com/njobrien1006/hass_traeger/issues",
+  "issue_tracker": "https://github.com/lymanepp/ha-traeger/issues",
   "version": "2024.08.25"
 }

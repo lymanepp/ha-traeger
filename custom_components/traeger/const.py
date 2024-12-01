@@ -7,7 +7,7 @@ DOMAIN = "traeger"
 DOMAIN_DATA = f"{DOMAIN}_data"
 VERSION = "2024.08.25"
 ATTRIBUTION = ""
-ISSUE_URL = "https://github.com/njobrien1006/hass_traeger/issues"
+ISSUE_URL = "https://github.com/lymanepp/ha-traeger/issues"
 
 # Icons
 ICON = "mdi:format-quote-close"

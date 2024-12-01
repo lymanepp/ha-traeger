@@ -11,7 +11,7 @@ set_custom_cook:
           domain: number
     steps:
       required: true
-      #Checkout https://github.com/njobrien1006/hass_traeger/blob/master/config/.storage/lovelace#L126 for more examples.
+      #Checkout https://github.com/lymanepp/ha-traeger/blob/master/config/.storage/lovelace#L126 for more examples.
       default:
         - #1 Set temp and smoke, advance on probe fired, or act_temp_adv
           set_temp: 180             #Set grill temp
