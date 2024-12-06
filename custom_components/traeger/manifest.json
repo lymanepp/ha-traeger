@@ -14,5 +14,5 @@
   "documentation": "https://github.com/lymanepp/ha-traeger",
   "iot_class": "cloud_push",
   "issue_tracker": "https://github.com/lymanepp/ha-traeger/issues",
-  "version": "2024.08.25"
+  "version": "2024.12.06"
 }
