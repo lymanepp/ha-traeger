@@ -1,53 +1,54 @@
 """Sensor platform for Traeger."""
 from homeassistant.const import UnitOfTemperature
-
 from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import (DOMAIN, GRILL_MIN_TEMP_C, GRILL_MIN_TEMP_F,
-                    GRILL_MODE_COOL_DOWN, GRILL_MODE_CUSTOM_COOK,
-                    GRILL_MODE_IDLE, GRILL_MODE_IGNITING,
-                    GRILL_MODE_MANUAL_COOK, GRILL_MODE_OFFLINE,
-                    GRILL_MODE_PREHEATING, GRILL_MODE_SHUTDOWN,
-                    GRILL_MODE_SLEEPING)
+from . import TraegerConfigEntry
+from .const import GRILL_MIN_TEMP_C, GRILL_MIN_TEMP_F, GrillMode
 from .entity import TraegerBaseEntity, TraegerGrillMonitor
+from .traeger import traeger
+
+GRILL_MODE_MAPPING = {
+    GrillMode.COOL_DOWN: "cool_down",
+    GrillMode.CUSTOM_COOK: "cook_custom",
+    GrillMode.MANUAL_COOK: "cook_manual",
+    GrillMode.PREHEATING: "preheating",
+    GrillMode.IGNITING: "igniting",
+    GrillMode.IDLE: "idle",
+    GrillMode.SLEEPING: "sleeping",
+    GrillMode.OFFLINE: "offline",
+    GrillMode.SHUTDOWN: "shutdown",
+}
 
 
-async def async_setup_entry(hass, entry, async_add_devices):
+async def async_setup_entry(hass: HomeAssistant, entry: TraegerConfigEntry, async_add_entities: AddEntitiesCallback):
     """Setup sensor platform."""
-    client = hass.data[DOMAIN][entry.entry_id]
+    client = entry.runtime_data.client
     grills = client.get_grills()
     for grill in grills:
         grill_id = grill["thingName"]
-        async_add_devices([
-            PelletSensor(client, grill["thingName"], "Pellet Level",
-                         "pellet_level")
+        async_add_entities([
+            PelletSensor(
+                client, grill_id, "Pellet Level", "pellet_level"),
+            ValueTemperature(
+                client, grill_id, "Ambient Temperature", "ambient"),
+            GrillTimer(
+                client, grill_id, "Cook Timer Start", "cook_timer_start"),
+            GrillTimer(
+                client, grill_id, "Cook Timer End", "cook_timer_end"),
+            GrillState(
+                client, grill_id, "Grill State", "grill_state"),
+            HeatingState(
+                client, grill_id, "Heating State", "heating_state")
         ])
-        async_add_devices([
-            ValueTemperature(client, grill["thingName"], "Ambient Temperature",
-                             "ambient")
-        ])
-        async_add_devices([
-            GrillTimer(client, grill["thingName"], "Cook Timer Start",
-                       "cook_timer_start")
-        ])
-        async_add_devices([
-            GrillTimer(client, grill["thingName"], "Cook Timer End",
-                       "cook_timer_end")
-        ])
-        async_add_devices([
-            GrillState(client, grill["thingName"], "Grill State", "grill_state")
-        ])
-        async_add_devices([
-            HeatingState(client, grill["thingName"], "Heating State",
-                         "heating_state")
-        ])
-        TraegerGrillMonitor(client, grill_id, async_add_devices, ProbeState)
+        TraegerGrillMonitor(client, grill_id, async_add_entities, ProbeState)
 
 
 class TraegerBaseSensor(TraegerBaseEntity, SensorEntity):
     """Base Sensor Class Common to All"""
 
-    def __init__(self, client, grill_id, friendly_name, value):
+    def __init__(self, client: traeger, grill_id, friendly_name, value):
         super().__init__(client, grill_id)
         self.value = value
         self.friendly_name = friendly_name
@@ -161,39 +162,19 @@ class GrillState(TraegerBaseSensor):
     @property
     def state(self):
         """Return the state of the sensor."""
-        returnval = "unknown"  # Likely a new state we don't know about
         state = self.grill_state["system_status"]
-
-        if state == GRILL_MODE_COOL_DOWN:
-            returnval = "cool_down"
-        elif state == GRILL_MODE_CUSTOM_COOK:
-            returnval = "cook_custom"
-        elif state == GRILL_MODE_MANUAL_COOK:
-            returnval = "cook_manual"
-        elif state == GRILL_MODE_PREHEATING:
-            returnval = "preheating"
-        elif state == GRILL_MODE_IGNITING:
-            returnval = "igniting"
-        elif state == GRILL_MODE_IDLE:
-            returnval = "idle"
-        elif state == GRILL_MODE_SLEEPING:
-            returnval = "sleeping"
-        elif state == GRILL_MODE_OFFLINE:
-            returnval = "offline"
-        elif state == GRILL_MODE_SHUTDOWN:
-            returnval = "shutdown"
-        return returnval
+        return GRILL_MODE_MAPPING.get(state, "unknown")
 
 
 class HeatingState(TraegerBaseSensor):
     """Traeger Heating State class."""
 
-    def __init__(self, client, grill_id, friendly_name, value):
+    def __init__(self, client: traeger, grill_id, friendly_name, value):
         super().__init__(client, grill_id, friendly_name, value)
         self.previous_target_temp = None
         self.previous_state = "idle"
-        self.preheat_modes = [GRILL_MODE_PREHEATING, GRILL_MODE_IGNITING]
-        self.cook_modes = [GRILL_MODE_CUSTOM_COOK, GRILL_MODE_MANUAL_COOK]
+        self.preheat_modes = [GrillMode.PREHEATING, GrillMode.IGNITING]
+        self.cook_modes = [GrillMode.CUSTOM_COOK, GrillMode.MANUAL_COOK]
 
     # Generic Properties
     @property
@@ -222,48 +203,25 @@ class HeatingState(TraegerBaseSensor):
 
         state = "idle"
         if grill_mode in self.preheat_modes:
-            if current_temp < min_cook_temp:
-                state = "preheating"
-            else:
-                state = "heating"
+            state = "preheating" if current_temp < min_cook_temp else "heating"
         elif grill_mode in self.cook_modes:
             if self.previous_state in ('heating', 'preheating'):
-                if current_temp >= target_temp:
-                    state = "at_temp"
-                else:
-                    state = "heating"
+                state = "at_temp" if current_temp >= target_temp else "heating"
             elif self.previous_state == "cooling":
-                if current_temp <= target_temp:
-                    state = "at_temp"
-                else:
-                    state = "cooling"
+                state = "at_temp" if current_temp <= target_temp else "cooling"
             elif self.previous_state == "at_temp":
-                if current_temp > high_temp:
-                    state = "over_temp"
-                elif current_temp < low_temp:
-                    state = "under_temp"
-                else:
-                    state = "at_temp"
+                state = "over_temp" if current_temp > high_temp else "under_temp" if current_temp < low_temp else "at_temp"
             elif self.previous_state == "under_temp":
-                if current_temp > low_temp:
-                    state = "at_temp"
-                else:
-                    state = "under_temp"
+                state = "at_temp" if current_temp > low_temp else "under_temp"
             elif self.previous_state == "over_temp":
-                if current_temp < high_temp:
-                    state = "at_temp"
-                else:
-                    state = "over_temp"
+                state = "at_temp" if current_temp < high_temp else "over_temp"
             # Catch all if coming from idle/unavailable
             else:
                 target_changed = True
 
             if target_changed:
-                if current_temp <= target_temp:
-                    state = "heating"
-                else:
-                    state = "cooling"
-        elif grill_mode == GRILL_MODE_COOL_DOWN:
+                state = "heating" if current_temp <= target_temp else "cooling"
+        elif grill_mode == GrillMode.COOL_DOWN:
             state = "cool_down"
 
         self.previous_target_temp = target_temp
@@ -274,7 +232,7 @@ class HeatingState(TraegerBaseSensor):
 class ProbeState(TraegerBaseSensor):
     """Traeger Probe Heating State class."""
 
-    def __init__(self, client, grill_id, sensor_id):
+    def __init__(self, client: traeger, grill_id: str, sensor_id: str):
         super().__init__(client, grill_id, f"Probe State {sensor_id}",
                          f"probe_state_{sensor_id}")
         self.sensor_id = sensor_id
@@ -283,8 +241,8 @@ class ProbeState(TraegerBaseSensor):
         self.previous_target_temp = None
         self.probe_alarm = False
         self.active_modes = [
-            GRILL_MODE_PREHEATING, GRILL_MODE_IGNITING, GRILL_MODE_CUSTOM_COOK,
-            GRILL_MODE_MANUAL_COOK
+            GrillMode.PREHEATING, GrillMode.IGNITING, GrillMode.CUSTOM_COOK,
+            GrillMode.MANUAL_COOK
         ]
 
         # Tell the Traeger client to call grill_accessory_update() when it gets an update
@@ -359,10 +317,7 @@ class ProbeState(TraegerBaseSensor):
             state = "at_temp"
         elif target_temp != 0 and grill_mode in self.active_modes:
             close_temp = 3 if self.grill_units == UnitOfTemperature.CELSIUS else 5
-            if probe_temp + close_temp >= target_temp:
-                state = "close"
-            else:
-                state = "set"
+            state = "close" if probe_temp + close_temp >= target_temp else "set"
         else:
             self.probe_alarm = False
 

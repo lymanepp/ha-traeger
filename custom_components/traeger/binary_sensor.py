@@ -1,19 +1,20 @@
 """Binary Sensor platform for Traeger."""
 
-from .const import DOMAIN
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
+
+from . import TraegerConfigEntry
 from .entity import TraegerBaseEntity
 
 
-async def async_setup_entry(hass, entry, async_add_devices):
+async def async_setup_entry(hass: HomeAssistant, entry: TraegerConfigEntry, async_add_entities: AddEntitiesCallback):
     """Setup Binary Sensor platform."""
-    client = hass.data[DOMAIN][entry.entry_id]
+    client = entry.runtime_data.client
     grills = client.get_grills()
     for grill in grills:
-        async_add_devices([
+        async_add_entities([
             TraegerTimer(client, grill["thingName"], "Cook Timer Complete",
-                         "cook_timer_complete")
-        ])
-        async_add_devices([
+                         "cook_timer_complete"),
             TraegerProbe(client, grill["thingName"], "Probe Alarm Fired",
                          "probe_alarm_fired")
         ])

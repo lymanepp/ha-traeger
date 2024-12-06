@@ -4,7 +4,7 @@ Custom integration to integrate traeger with Home Assistant.
 For more details about this integration, please refer to
 https://github.com/lymanepp/ha-traeger
 """
-import asyncio
+from dataclasses import dataclass
 import logging
 from datetime import timedelta
 
@@ -23,12 +23,15 @@ SCAN_INTERVAL = timedelta(seconds=30)
 _LOGGER: logging.Logger = logging.getLogger(__package__)
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType):  # pylint: disable=unused-argument
-    """Set up this integration using YAML is not supported."""
-    return True
+@dataclass
+class RuntimeData:
+    client: traeger
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
+type TraegerConfigEntry = ConfigEntry[RuntimeData]
+
+
+async def async_setup_entry(hass: HomeAssistant, entry: TraegerConfigEntry):
     """Set up this integration using UI."""
     if hass.data.get(DOMAIN) is None:
         hass.data.setdefault(DOMAIN, {})
@@ -42,7 +45,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     client = traeger(username, password, hass, session)
 
     await client.start(30)
-    hass.data[DOMAIN][entry.entry_id] = client
+
+    entry.runtime_data = RuntimeData(client)
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
@@ -55,9 +59,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(hass: HomeAssistant, entry: TraegerConfigEntry) -> bool:
     """Handle removal of an entry."""
-    client = hass.data[DOMAIN][entry.entry_id]
+    client = entry.runtime_data.client
     if unloaded := await hass.config_entries.async_unload_platforms(
             entry, PLATFORMS):
         hass.data[DOMAIN].pop(entry.entry_id)
@@ -66,7 +70,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return unloaded
 
 
-async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+async def async_reload_entry(hass: HomeAssistant, entry: TraegerConfigEntry) -> None:
     """Reload config entry."""
     await async_unload_entry(hass, entry)
     await async_setup_entry(hass, entry)

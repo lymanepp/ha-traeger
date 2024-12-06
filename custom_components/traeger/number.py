@@ -5,20 +5,15 @@ import re
 
 import voluptuous as vol
 from homeassistant.components.number import NumberEntity
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import entity_platform
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import (
-    DOMAIN,
-    GRILL_MODE_COOL_DOWN,
-    GRILL_MODE_CUSTOM_COOK,
-    GRILL_MODE_IDLE,
-    GRILL_MODE_IGNITING,
-    GRILL_MODE_SHUTDOWN,
-    GRILL_MODE_SLEEPING,
-)
-
+from . import TraegerConfigEntry
+from .const import GrillMode
 from .entity import TraegerBaseEntity
+from .traeger import traeger
 
 SERVICE_CUSTOMCOOK = "set_custom_cook"
 ENTITY_ID = "entity_id"
@@ -30,7 +25,7 @@ SCHEMA_CUSTOMCOOK = {
 _LOGGER: logging.Logger = logging.getLogger(__package__)
 
 
-async def async_setup_entry(hass, entry, async_add_devices):
+async def async_setup_entry(hass: HomeAssistant, entry: TraegerConfigEntry, async_add_entities: AddEntitiesCallback):
     """
     Setup Number/Timer platform.
     Setup Service platform.
@@ -38,20 +33,20 @@ async def async_setup_entry(hass, entry, async_add_devices):
     platform = entity_platform.current_platform.get()
     platform.async_register_entity_service(SERVICE_CUSTOMCOOK,
                                            SCHEMA_CUSTOMCOOK, "set_custom_cook")
-    client = hass.data[DOMAIN][entry.entry_id]
+    client = entry.runtime_data.client
     grills = client.get_grills()
     for grill in grills:
-        async_add_devices(
-            [TraegerNumberEntity(client, grill["thingName"], "cook_timer")])
-        async_add_devices([
-            CookCycNumberEntity(client, grill["thingName"], "cook_cycle", hass)
-        ])
+        async_add_entities(
+            [TraegerNumberEntity(client, grill["thingName"], "cook_timer"),
+             CookCycNumberEntity(
+                 client, grill["thingName"], "cook_cycle", hass)
+             ])
 
 
 class CookCycNumberEntity(NumberEntity, TraegerBaseEntity):
     """Traeger Number/Timer Value class."""
 
-    def __init__(self, client, grill_id, devname, hass):
+    def __init__(self, client: traeger, grill_id: str, devname: str, hass: HomeAssistant):
         super().__init__(client, grill_id)
         self.devname = devname
         self.num_value = 0
@@ -101,10 +96,10 @@ class CookCycNumberEntity(NumberEntity, TraegerBaseEntity):
             return self.num_value
         name = re.sub("[^A-Za-z0-9]+", "", self.grill_details["friendlyName"])
         if self.num_value > 0 and self.grill_state["system_status"] in [
-                GRILL_MODE_COOL_DOWN,
-                GRILL_MODE_SLEEPING,
-                GRILL_MODE_SHUTDOWN,
-                GRILL_MODE_IDLE,
+                GrillMode.COOL_DOWN,
+                GrillMode.SLEEPING,
+                GrillMode.SHUTDOWN,
+                GrillMode.IDLE,
         ]:
             _LOGGER.info("Steps not available when not cooking. Revert to 0.")
             self.num_value = 0
@@ -270,11 +265,14 @@ class CookCycNumberEntity(NumberEntity, TraegerBaseEntity):
         curr_step = {}
         next_step = {}
         if self.num_value > 1:
-            prev_step = f"{self.num_value - 1}: {self.cook_cycle[self.num_value - 2]}"
+            prev_step = f"{self.num_value -
+                           1}: {self.cook_cycle[self.num_value - 2]}"
         if self.num_value > 0:
-            curr_step = f"{self.num_value}: {self.cook_cycle[self.num_value - 1]}"
+            curr_step = f"{self.num_value}: {
+                self.cook_cycle[self.num_value - 1]}"
         if self.num_value < len(self.cook_cycle):
-            next_step = f"{self.num_value + 1}: {self.cook_cycle[self.num_value]}"
+            next_step = f"{self.num_value +
+                           1}: {self.cook_cycle[self.num_value]}"
         custom_attributes = {
             "prev_step": str(prev_step),
             "curr_step": str(curr_step),
@@ -308,7 +306,7 @@ class CookCycNumberEntity(NumberEntity, TraegerBaseEntity):
 class TraegerNumberEntity(NumberEntity, TraegerBaseEntity):
     """Traeger Number/Timer Value class."""
 
-    def __init__(self, client, grill_id, devname):
+    def __init__(self, client: traeger, grill_id, devname):
         super().__init__(client, grill_id)
         self.devname = devname
         self.grill_register_callback()
@@ -376,7 +374,7 @@ class TraegerNumberEntity(NumberEntity, TraegerBaseEntity):
         if self.grill_state is None:
             return
         state = self.grill_state["system_status"]
-        if GRILL_MODE_IGNITING <= state <= GRILL_MODE_CUSTOM_COOK:
+        if GrillMode.IGNITING <= state <= GrillMode.CUSTOM_COOK:
             if value >= 1:
                 await self.client.set_timer_sec(self.grill_id,
                                                 (round(value) * 60))

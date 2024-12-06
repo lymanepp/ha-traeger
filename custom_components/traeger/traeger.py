@@ -21,6 +21,7 @@ import uuid
 import aiohttp
 import async_timeout
 import homeassistant.const
+from homeassistant.core import HomeAssistant
 import paho.mqtt.client as mqtt
 
 CLIENT_ID = "2fuohjtqv1e63dckp5v84rau0j"
@@ -32,7 +33,7 @@ _LOGGER: logging.Logger = logging.getLogger(__package__)
 class traeger:  # pylint: disable=invalid-name,too-many-instance-attributes,too-many-public-methods
     """Traeger API Wrapper"""
 
-    def __init__(self, username, password, hass, request_library):
+    def __init__(self, username: str, password: str, hass: HomeAssistant, request_library: aiohttp.ClientSession):
         self.username = username
         self.password = password
         self.mqtt_uuid = str(uuid.uuid1())
@@ -211,7 +212,7 @@ class traeger:  # pylint: disable=invalid-name,too-many-instance-attributes,too-
                 self.mqtt_client_inloop = False
                 while (self.__mqtt_url_remaining() < 60 or
                        self.mqtt_thread_refreshing
-                      ) and self.mqtt_thread_running:
+                       ) and self.mqtt_thread_running:
                     time.sleep(1)
         _LOGGER.debug("Should be the end of the thread.")
 
@@ -222,15 +223,15 @@ class traeger:  # pylint: disable=invalid-name,too-many-instance-attributes,too-
             _LOGGER.debug("ReInit Client")
         else:
             self.mqtt_client = mqtt.Client(transport="websockets")
-            #self.mqtt_client.on_log = self.mqtt_onlog
-            #logging passed via enable_logger this would be redundant.
+            # self.mqtt_client.on_log = self.mqtt_onlog
+            # logging passed via enable_logger this would be redundant.
             self.mqtt_client.on_connect = self.mqtt_onconnect
             self.mqtt_client.on_connect_fail = self.mqtt_onconnectfail
             self.mqtt_client.on_subscribe = self.mqtt_onsubscribe
             self.mqtt_client.on_message = self.mqtt_onmessage
-            if _LOGGER.level <= 10:  #Add these callbacks only if our logging is Debug or less.
+            if _LOGGER.level <= 10:  # Add these callbacks only if our logging is Debug or less.
                 self.mqtt_client.enable_logger(_LOGGER)
-                self.mqtt_client.on_publish = self.mqtt_onpublish  #We dont Publish to MQTT
+                self.mqtt_client.on_publish = self.mqtt_onpublish  # We dont Publish to MQTT
                 self.mqtt_client.on_unsubscribe = self.mqtt_onunsubscribe
                 self.mqtt_client.on_disconnect = self.mqtt_ondisconnect
                 self.mqtt_client.on_socket_open = self.mqtt_onsocketopen
@@ -255,7 +256,7 @@ class traeger:  # pylint: disable=invalid-name,too-many-instance-attributes,too-
             self.mqtt_thread_running = True
             self.mqtt_thread.start()
 
-#===========================Paho MQTT Functions=====================================================
+# ===========================Paho MQTT Functions=====================================================
 
     def mqtt_onlog(self, client, userdata, level, buf):
         """MQTT Thread on_log"""
@@ -277,7 +278,7 @@ class traeger:  # pylint: disable=invalid-name,too-many-instance-attributes,too-
                       userdata)
         _LOGGER.warning("Grill Connect Failed! MQTT Client Kill.")
         asyncio.run_coroutine_threadsafe(
-            self.kill(), self.loop)  #Shutdown if we arn't getting anywhere.
+            self.kill(), self.loop)  # Shutdown if we arn't getting anywhere.
 
     def mqtt_onsubscribe(self, client, userdata, mid, granted_qos):
         """MQTT Thread on_subscribe"""
@@ -303,9 +304,9 @@ class traeger:  # pylint: disable=invalid-name,too-many-instance-attributes,too-
             self.grill_status[grill_id] = json.loads(message.payload)
             asyncio.run_coroutine_threadsafe(self.grill_callback(grill_id),
                                              self.loop)
-            if self.grills_active is False:  #Go see if any grills are doing work.
-                for grill in self.grills:  #If nobody is working next MQTT refresh
-                    grill_id = grill["thingName"]  #It'll call kill.
+            if self.grills_active is False:  # Go see if any grills are doing work.
+                for grill in self.grills:  # If nobody is working next MQTT refresh
+                    grill_id = grill["thingName"]  # It'll call kill.
                     state = self.get_state_for_device(grill_id)
                     if state is None:
                         return
@@ -349,61 +350,53 @@ class traeger:  # pylint: disable=invalid-name,too-many-instance-attributes,too-
                       client, userdata, sock)
 
 
-#===========================/Paho MQTT Functions===================================================
+# ===========================/Paho MQTT Functions===================================================
+
+    def __get_attribute_for_device(self, thingName, attribute, default=None):
+        """Generic method to get a specific attribute for a device."""
+        if thingName not in self.grill_status:
+            return default
+        return self.grill_status[thingName].get(attribute, default)
 
     def get_state_for_device(self, thingName):
-        """Get specifics of status"""
-        if thingName not in self.grill_status:
-            return None
-        return self.grill_status[thingName]["status"]
+        """Get specifics of status."""
+        return self.__get_attribute_for_device(thingName, "status")
 
     def get_details_for_device(self, thingName):
-        """Get specifics of details"""
-        if thingName not in self.grill_status:
-            return None
-        return self.grill_status[thingName]["details"]
+        """Get specifics of details."""
+        return self.__get_attribute_for_device(thingName, "details")
 
     def get_limits_for_device(self, thingName):
-        """Get specifics of limits"""
-        if thingName not in self.grill_status:
-            return None
-        return self.grill_status[thingName]["limits"]
+        """Get specifics of limits."""
+        return self.__get_attribute_for_device(thingName, "limits")
 
     def get_settings_for_device(self, thingName):
-        """Get specifics of settings"""
-        if thingName not in self.grill_status:
-            return None
-        return self.grill_status[thingName]["settings"]
+        """Get specifics of settings."""
+        return self.__get_attribute_for_device(thingName, "settings")
 
     def get_features_for_device(self, thingName):
-        """Get specifics of features"""
-        if thingName not in self.grill_status:
-            return None
-        return self.grill_status[thingName]["features"]
+        """Get specifics of features."""
+        return self.__get_attribute_for_device(thingName, "features")
 
     def get_cloudconnect(self, thingName):
-        """Indicate wheather MQTT is connected."""
-        if thingName not in self.grill_status:
-            return False
-        return self.mqtt_thread_running
+        """Indicate whether MQTT is connected."""
+        return self.__get_attribute_for_device(thingName, "status", False) and self.mqtt_thread_running
 
     def get_units_for_device(self, thingName):
         """Parse what units the grill is operating in."""
         state = self.get_state_for_device(thingName)
-        if state is None:
-            return homeassistant.const.UnitOfTemperature.FAHRENHEIT
-        if state["units"] == 0:
-            return homeassistant.const.UnitOfTemperature.CELSIUS
-        return homeassistant.const.UnitOfTemperature.FAHRENHEIT
+        return (
+            homeassistant.const.UnitOfTemperature.CELSIUS
+            if state and state.get("units") == 0
+            else homeassistant.const.UnitOfTemperature.FAHRENHEIT
+        )
 
     def get_details_for_accessory(self, thingName, accessory_id):
         """Get Details for Probes"""
-        state = self.get_state_for_device(thingName)
-        if state is None:
-            return None
-        for accessory in state["acc"]:
-            if accessory["uuid"] == accessory_id:
-                return accessory
+        if state := self.get_state_for_device(thingName):
+            for accessory in state["acc"]:
+                if accessory["uuid"] == accessory_id:
+                    return accessory
         return None
 
     async def start(self, delay):
@@ -452,23 +445,20 @@ class traeger:  # pylint: disable=invalid-name,too-many-instance-attributes,too-
             self.task = None
             self.mqtt_thread_running = False
             self.mqtt_client.disconnect()
-            while self.mqtt_client_inloop:  #Wait for disconnect to finish
+            while self.mqtt_client_inloop:  # Wait for disconnect to finish
                 await asyncio.sleep(0.25)
             self.mqtt_url_expires = time.time()
-            for grill in self.grills:  #Mark the grill(s) disconnected so they report unavail.
+            # Mark the grill(s) disconnected so they report unavail.
+            for grill in self.grills:
                 grill_id = grill[
-                    "thingName"]  #Also hit the callbacks to update HA
+                    "thingName"]  # Also hit the callbacks to update HA
                 self.grill_status[grill_id]["status"]["connected"] = False
                 await self.grill_callback(grill_id)
         else:
             _LOGGER.info("Task Already Dead")
 
     # pylint: disable=dangerous-default-value
-    async def __api_wrapper(self,
-                            method: str,
-                            url: str,
-                            data: dict = {},
-                            headers: dict = {}) -> dict:
+    async def __api_wrapper(self, method: str, url: str, data: dict = {}, headers: dict = {}) -> dict:
         """Get information from the API."""
         try:
             async with async_timeout.timeout(TIMEOUT):
@@ -479,21 +469,27 @@ class traeger:  # pylint: disable=invalid-name,too-many-instance-attributes,too-
 
                 if method == "post_raw":
                     await self.request.post(url, headers=headers, json=data)
+                    return {}
 
-                elif method == "post":
-                    response = await self.request.post(url,
-                                                       headers=headers,
-                                                       json=data)
+                if method == "post":
+                    response = await self.request.post(url, headers=headers, json=data)
                     data = await response.read()
                     return json.loads(data)
+
         except asyncio.TimeoutError as exception:
-            _LOGGER.error("Timeout error fetching information from %s - %s",
-                          url, exception)
+            _LOGGER.error(
+                "Timeout error fetching information from {url} - {exception}")
+        except aiohttp.ClientError as exception:
+            _LOGGER.error(
+                "Error fetching information from {url} - {exception}")
         except (KeyError, TypeError) as exception:
-            _LOGGER.error("Error parsing information from %s - %s", url,
-                          exception)
-        except (aiohttp.ClientError, socket.gaierror) as exception:
-            _LOGGER.error("Error fetching information from %s - %s", url,
-                          exception)
+            _LOGGER.error(
+                "Error parsing information from {url} - {exception}")
+        except socket.gaierror as exception:
+            _LOGGER.error(
+                f"Error fetching information from {url} - {exception}")
         except Exception as exception:  # pylint: disable=broad-except
-            _LOGGER.error("Something really wrong happend! - %s", exception)
+            _LOGGER.error(
+                "Unexpected error fetching data from {url} - {exception}")
+
+        return {}

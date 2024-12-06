@@ -1,7 +1,9 @@
 """TraegerBaseEntity class"""
 from homeassistant.helpers.entity import Entity
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import ATTRIBUTION, DOMAIN, NAME
+from .traeger import traeger
 
 
 class TraegerBaseEntity(Entity):  # pylint: disable=too-many-instance-attributes
@@ -18,8 +20,10 @@ class TraegerBaseEntity(Entity):  # pylint: disable=too-many-instance-attributes
         self.grill_state = self.client.get_state_for_device(self.grill_id)
         self.grill_units = self.client.get_units_for_device(self.grill_id)
         self.grill_details = self.client.get_details_for_device(self.grill_id)
-        self.grill_features = self.client.get_features_for_device(self.grill_id)
-        self.grill_settings = self.client.get_settings_for_device(self.grill_id)
+        self.grill_features = self.client.get_features_for_device(
+            self.grill_id)
+        self.grill_settings = self.client.get_settings_for_device(
+            self.grill_id)
         self.grill_limits = self.client.get_limits_for_device(self.grill_id)
         self.grill_cloudconnect = self.client.get_cloudconnect(self.grill_id)
 
@@ -78,10 +82,10 @@ class TraegerBaseEntity(Entity):  # pylint: disable=too-many-instance-attributes
 class TraegerGrillMonitor:
     """TraegerGrillMonitor Class."""
 
-    def __init__(self, client, grill_id, async_add_devices, probe_entity=None):
+    def __init__(self, client: traeger, grill_id: str, async_add_entities: AddEntitiesCallback, probe_entity=None):
         self.client = client
         self.grill_id = grill_id
-        self.async_add_devices = async_add_devices
+        self.async_add_entities = async_add_entities
         self.probe_entity = probe_entity
         self.accessory_status = {}
 
@@ -106,8 +110,8 @@ class TraegerGrillMonitor:
             if accessory["type"] in ["probe", "btprobe", "hob"]:
                 if accessory["uuid"] not in self.accessory_status:
                     if self.probe_entity:
-                        self.async_add_devices([
-                            self.probe_entity(self.client, self.grill_id,
-                                              accessory["uuid"])
+                        self.async_add_entities([
+                            self.probe_entity(
+                                self.client, self.grill_id, accessory["uuid"])
                         ])
                         self.accessory_status[accessory["uuid"]] = True
