@@ -1,5 +1,7 @@
 """Constants for traeger."""
-from enum import Enum
+
+from enum import IntEnum
+
 from homeassistant.const import UnitOfTemperature
 
 # Base component constants
@@ -28,18 +30,6 @@ CONF_PASSWORD = "password"
 
 # Defaults
 DEFAULT_NAME = DOMAIN
-
-
-class GrillMode(Enum):
-    OFFLINE = 99  # Offline
-    SHUTDOWN = 9  # Cooled down, heading to sleep
-    COOL_DOWN = 8  # Cool down cycle
-    CUSTOM_COOK = 7  # Custom cook
-    MANUAL_COOK = 6  # Manual cook
-    PREHEATING = 5  # Preheating
-    IGNITING = 4  # Igniting
-    IDLE = 3  # Idle (Power switch on, screen on)
-    SLEEPING = 2  # Sleeping (Power switch on, screen off)
 
 
 # Grill Temps

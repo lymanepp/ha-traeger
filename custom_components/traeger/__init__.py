@@ -4,18 +4,19 @@ Custom integration to integrate traeger with Home Assistant.
 For more details about this integration, please refer to
 https://github.com/lymanepp/ha-traeger
 """
+
 from dataclasses import dataclass
-import logging
 from datetime import timedelta
+import logging
+from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (EVENT_HOMEASSISTANT_STOP)
+from homeassistant.const import EVENT_HOMEASSISTANT_STOP
 from homeassistant.core import Event, HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.typing import ConfigType
 
-from .const import (CONF_PASSWORD, CONF_USERNAME, DOMAIN, PLATFORMS,
-                    STARTUP_MESSAGE)
+from .const import CONF_PASSWORD, CONF_USERNAME, DOMAIN, PLATFORMS, STARTUP_MESSAGE
 from .traeger import traeger
 
 SCAN_INTERVAL = timedelta(seconds=30)
@@ -24,21 +25,18 @@ _LOGGER: logging.Logger = logging.getLogger(__package__)
 
 
 @dataclass
-class RuntimeData:
+class TraegerData:
     client: traeger
 
 
-type TraegerConfigEntry = ConfigEntry[RuntimeData]
-
-
-async def async_setup_entry(hass: HomeAssistant, entry: TraegerConfigEntry):
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry[TraegerData]) -> bool:
     """Set up this integration using UI."""
     if hass.data.get(DOMAIN) is None:
         hass.data.setdefault(DOMAIN, {})
         _LOGGER.info(STARTUP_MESSAGE)
 
-    username = entry.data.get(CONF_USERNAME)
-    password = entry.data.get(CONF_PASSWORD)
+    username: str = entry.data.get(CONF_USERNAME, "")
+    password: str = entry.data.get(CONF_PASSWORD, "")
 
     session = async_get_clientsession(hass)
 
@@ -46,11 +44,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: TraegerConfigEntry):
 
     await client.start(30)
 
-    entry.runtime_data = RuntimeData(client)
+    entry.runtime_data = TraegerData(client)
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
-    async def async_shutdown(event: Event):  # pylint: disable=unused-argument
+    async def async_shutdown(event: Event[Any]) -> None:  # pylint: disable=unused-argument
         """Shut down the client."""
         await client.kill()
 
@@ -59,18 +57,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: TraegerConfigEntry):
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: TraegerConfigEntry) -> bool:
+async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry[TraegerData]) -> bool:
     """Handle removal of an entry."""
     client = entry.runtime_data.client
-    if unloaded := await hass.config_entries.async_unload_platforms(
-            entry, PLATFORMS):
+    if unloaded := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
         hass.data[DOMAIN].pop(entry.entry_id)
     await client.kill()
 
     return unloaded
 
 
-async def async_reload_entry(hass: HomeAssistant, entry: TraegerConfigEntry) -> None:
+async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry[TraegerData]) -> None:
     """Reload config entry."""
     await async_unload_entry(hass, entry)
     await async_setup_entry(hass, entry)
