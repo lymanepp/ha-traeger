@@ -1,4 +1,7 @@
 """Constants for traeger."""
+
+from enum import IntEnum
+
 from homeassistant.const import UnitOfTemperature
 
 # Base component constants
@@ -28,16 +31,18 @@ CONF_PASSWORD = "password"
 # Defaults
 DEFAULT_NAME = DOMAIN
 
-# Grill Modes
-GRILL_MODE_OFFLINE = 99  # Offline
-GRILL_MODE_SHUTDOWN = 9  # Cooled down, heading to sleep
-GRILL_MODE_COOL_DOWN = 8  # Cool down cycle
-GRILL_MODE_CUSTOM_COOK = 7  # Custom cook
-GRILL_MODE_MANUAL_COOK = 6  # Manual cook
-GRILL_MODE_PREHEATING = 5  # Preheating
-GRILL_MODE_IGNITING = 4  # Igniting
-GRILL_MODE_IDLE = 3  # Idle (Power switch on, screen on)
-GRILL_MODE_SLEEPING = 2  # Sleeping (Power switch on, screen off)
+
+class GrillMode(IntEnum):
+    OFFLINE = 99  # Offline
+    SHUTDOWN = 9  # Cooled down, heading to sleep
+    COOL_DOWN = 8  # Cool down cycle
+    CUSTOM_COOK = 7  # Custom cook
+    MANUAL_COOK = 6  # Manual cook
+    PREHEATING = 5  # Preheating
+    IGNITING = 4  # Igniting
+    IDLE = 3  # Idle (Power switch on, screen on)
+    SLEEPING = 2  # Sleeping (Power switch on, screen off)
+
 
 # Grill Temps
 # these are the min temps the traeger app would set
