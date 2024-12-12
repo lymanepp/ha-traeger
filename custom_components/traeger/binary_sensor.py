@@ -61,7 +61,7 @@ class TraegerBaseSensor(TraegerBaseEntity):
     @property
     def state(self) -> Any:
         """Return the state of the binary sensor."""
-        return getattr(self.grill_state, self.value)
+        return "on" if getattr(self.grill_state, self.value) else "off"
 
 
 class TraegerTimer(TraegerBaseSensor):

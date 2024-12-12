@@ -25,17 +25,14 @@ class TraegerBaseEntity(Entity):  # pylint: disable=too-many-instance-attributes
         self.grill_state = self.client.get_state_for_device(self.grill_id)
         self.grill_units = self.client.get_units_for_device(self.grill_id)
         self.grill_details = self.client.get_details_for_device(self.grill_id)
-        self.grill_features = self.client.get_features_for_device(
-            self.grill_id)
-        self.grill_settings = self.client.get_settings_for_device(
-            self.grill_id)
+        self.grill_features = self.client.get_features_for_device(self.grill_id)
+        self.grill_settings = self.client.get_settings_for_device(self.grill_id)
         self.grill_limits = self.client.get_limits_for_device(self.grill_id)
         self.grill_cloudconnect = self.client.get_cloudconnect(self.grill_id)
 
     def grill_register_callback(self) -> None:
         """Tell the Traeger client to call grill_update() when it gets an update"""
-        self.client.set_callback_for_grill(
-            self.grill_id, self.grill_update_internal)
+        self.client.set_callback_for_grill(self.grill_id, self.grill_update_internal)
 
     def grill_update_internal(self) -> None:
         """Internal HA Update"""
@@ -106,9 +103,7 @@ class TraegerGrillMonitor:
 
         self.grill_add_accessories()
 
-        self.client.set_callback_for_grill(
-            self.grill_id, self.grill_monitor_internal
-        )
+        self.client.set_callback_for_grill(self.grill_id, self.grill_monitor_internal)
 
     def grill_monitor_internal(self) -> None:
         """Internal HA Update"""
@@ -126,7 +121,6 @@ class TraegerGrillMonitor:
             if accessory.type in ["probe", "btprobe", "hob"]:
                 if accessory.uuid not in self.accessory_status:
                     self.async_add_entities(
-                        [self.probe_entity(
-                            self.client, self.grill_id, accessory.uuid)]
+                        [self.probe_entity(self.client, self.grill_id, accessory.uuid)]
                     )
                     self.accessory_status[accessory.uuid] = True

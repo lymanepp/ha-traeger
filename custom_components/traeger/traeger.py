@@ -127,8 +127,7 @@ class traeger:  # pylint: disable=invalid-name,too-many-instance-attributes,too-
         Send Grill Commands to API.
         Command are via API and not MQTT.
         """
-        _LOGGER.debug("Send Command Topic: %s, Send Command: %s",
-                      thingName, command)
+        _LOGGER.debug("Send Command Topic: %s, Send Command: %s", thingName, command)
         await self.__refresh_token()
         assert self.token is not None
         api_url = "https://1ywgyc65d1.execute-api.us-west-2.amazonaws.com"
@@ -208,17 +207,13 @@ class traeger:  # pylint: disable=invalid-name,too-many-instance-attributes,too-
                     "https://1ywgyc65d1.execute-api.us-west-2.amazonaws.com/prod/mqtt-connections",
                     headers={"Authorization": self.token},
                 )
-                self.mqtt_url_expires = myjson["expirationSeconds"] + \
-                    mqtt_request_time
+                self.mqtt_url_expires = myjson["expirationSeconds"] + mqtt_request_time
                 self.mqtt_url = myjson["signedUrl"]
             except KeyError as exception:
-                _LOGGER.error(
-                    "Key Error Failed to Parse MQTT URL %s - %s", myjson, exception)
+                _LOGGER.error("Key Error Failed to Parse MQTT URL %s - %s", myjson, exception)
             except Exception as exception:  # pylint: disable=broad-except
-                _LOGGER.error(
-                    "Other Error Failed to Parse MQTT URL %s - %s", myjson, exception)
-        _LOGGER.debug("MQTT URL:%s Expires @:%s",
-                      self.mqtt_url, self.mqtt_url_expires)
+                _LOGGER.error("Other Error Failed to Parse MQTT URL %s - %s", myjson, exception)
+        _LOGGER.debug("MQTT URL:%s Expires @:%s", self.mqtt_url, self.mqtt_url_expires)
 
     def mqtt_connect_func(self) -> None:
         """
@@ -301,8 +296,7 @@ class traeger:  # pylint: disable=invalid-name,too-many-instance-attributes,too-
 
     def mqtt_onconnectfail(self, client: mqtt.Client, userdata: Any) -> None:
         """MQTT Thread on_connect_fail"""
-        _LOGGER.debug(
-            "Connect Fail Callback. Client:%s userdata:%s", client, userdata)
+        _LOGGER.debug("Connect Fail Callback. Client:%s userdata:%s", client, userdata)
         _LOGGER.warning("Grill Connect Failed! MQTT Client Kill.")
         asyncio.run_coroutine_threadsafe(
             self.kill(), self.loop
@@ -324,8 +318,7 @@ class traeger:  # pylint: disable=invalid-name,too-many-instance-attributes,too-
             grill_id = grill.thingName
             if grill_id in self.grill_status:
                 del self.grill_status[grill_id]
-            asyncio.run_coroutine_threadsafe(
-                self.__update_state(grill_id), self.loop)
+            asyncio.run_coroutine_threadsafe(self.__update_state(grill_id), self.loop)
 
     def mqtt_onmessage(
         self, client: mqtt.Client, userdata: Any, message: mqtt.MQTTMessage
@@ -342,13 +335,12 @@ class traeger:  # pylint: disable=invalid-name,too-many-instance-attributes,too-
             self.__mqtt_url_remaining(),
         )
         if message.topic.startswith("prod/thing/update/"):
-            grill_id = message.topic[len("prod/thing/update/"):]
+            grill_id = message.topic[len("prod/thing/update/") :]
             data = json.loads(message.payload)
             self.grill_status[grill_id] = from_dict(
                 data_class=Device, data=data, config=Config(cast=[GrillMode])
             )
-            asyncio.run_coroutine_threadsafe(
-                self.grill_callback(grill_id), self.loop)
+            asyncio.run_coroutine_threadsafe(self.grill_callback(grill_id), self.loop)
             if self.grills_active is False:  # Go see if any grills are doing work.
                 for grill in self.grills:  # If nobody is working next MQTT refresh
                     grill_id = grill.thingName  # It'll call kill.
@@ -361,42 +353,35 @@ class traeger:  # pylint: disable=invalid-name,too-many-instance-attributes,too-
 
     def mqtt_onpublish(self, client: mqtt.Client, userdata: Any, mid: int) -> None:
         """MQTT Thread on_publish"""
-        _LOGGER.debug(
-            "OnPublish Callback. Client:%s userdata:%s mid:%s", client, userdata, mid)
+        _LOGGER.debug("OnPublish Callback. Client:%s userdata:%s mid:%s", client, userdata, mid)
 
     def mqtt_onunsubscribe(self, client: mqtt.Client, userdata: Any, mid: int) -> None:
         """MQTT Thread on_unsubscribe"""
-        _LOGGER.debug(
-            "OnUnsubscribe Callback. Client:%s userdata:%s mid:%s", client, userdata, mid)
+        _LOGGER.debug("OnUnsubscribe Callback. Client:%s userdata:%s mid:%s", client, userdata, mid)
 
     def mqtt_ondisconnect(self, client: mqtt.Client, userdata: Any, rc: int) -> None:
         """MQTT Thread on_undisconnect"""
-        _LOGGER.debug(
-            "OnDisconnect Callback. Client:%s userdata:%s rc:%s", client, userdata, rc)
+        _LOGGER.debug("OnDisconnect Callback. Client:%s userdata:%s rc:%s", client, userdata, rc)
 
     def mqtt_onsocketopen(self, client: mqtt.Client, userdata: Any, sock: socket.socket) -> None:
         """MQTT Thread on_socketopen"""
-        _LOGGER.debug(
-            "Sock.Open.Report...Client: %s UserData: %s Sock: %s", client, userdata, sock)
+        _LOGGER.debug("Sock.Open.Report...Client: %s UserData: %s Sock: %s", client, userdata, sock)
 
     def mqtt_onsocketclose(self, client: mqtt.Client, userdata: Any, sock: socket.socket) -> None:
         """MQTT Thread on_socketclose"""
-        _LOGGER.debug(
-            "Sock.Clse.Report...Client: %s UserData: %s Sock: %s", client, userdata, sock)
+        _LOGGER.debug("Sock.Clse.Report...Client: %s UserData: %s Sock: %s", client, userdata, sock)
 
     def mqtt_onsocketregisterwrite(
         self, client: mqtt.Client, userdata: Any, sock: socket.socket
     ) -> None:
         """MQTT Thread on_socketregwrite"""
-        _LOGGER.debug(
-            "Sock.Regi.Write....Client: %s UserData: %s Sock: %s", client, userdata, sock)
+        _LOGGER.debug("Sock.Regi.Write....Client: %s UserData: %s Sock: %s", client, userdata, sock)
 
     def mqtt_onsocketunregisterwrite(
         self, client: mqtt.Client, userdata: Any, sock: socket.socket
     ) -> None:
         """MQTT Thread on_socketunregwrite"""
-        _LOGGER.debug(
-            "Sock.UnRg.Write....Client: %s UserData: %s Sock: %s", client, userdata, sock)
+        _LOGGER.debug("Sock.UnRg.Write....Client: %s UserData: %s Sock: %s", client, userdata, sock)
 
     # ===========================/Paho MQTT Functions===================================================
 
@@ -526,13 +511,10 @@ class traeger:  # pylint: disable=invalid-name,too-many-instance-attributes,too-
                     return cast(dict[str, Any], json.loads(bytes))
 
         except asyncio.TimeoutError as exception:
-            _LOGGER.error(
-                "Timeout error fetching information from %s - %s", url, exception)
+            _LOGGER.error("Timeout error fetching information from %s - %s", url, exception)
         except (aiohttp.ClientError, socket.gaierror) as exception:
-            _LOGGER.error(
-                "Error fetching information from %s - %s", url, exception)
+            _LOGGER.error("Error fetching information from %s - %s", url, exception)
         except Exception as exception:  # pylint: disable=broad-except
-            _LOGGER.error(
-                f"Unexpected error fetching data fromfrom %s - %s", url, exception)
+            _LOGGER.error("Unexpected error fetching data fromfrom %s - %s", url, exception)
 
         return {}

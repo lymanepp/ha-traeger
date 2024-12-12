@@ -36,8 +36,7 @@ async def async_setup_entry(
                 TraegerSwitchEntity(
                     client, grill.thingName, "keepwarm", "Keep Warm Enabled", "mdi:beach", 18, 19
                 ),
-                TraegerConnectEntity(
-                    client, grill.thingName, "connect", "Connect"),
+                TraegerConnectEntity(client, grill.thingName, "connect", "Connect"),
             ]
         )
     return True

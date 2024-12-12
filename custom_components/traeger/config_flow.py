@@ -1,7 +1,7 @@
 """Adds config flow for Traeger."""
 
 import logging
-from typing import Any, cast
+from typing import Any
 
 from homeassistant.config_entries import (
     CONN_CLASS_CLOUD_POLL,
@@ -44,8 +44,7 @@ class TraegerFlowHandler(ConfigFlow, domain=DOMAIN):
                 user_input[CONF_USERNAME], user_input[CONF_PASSWORD]
             )
             if valid:
-                return self.async_create_entry(
-                    title=user_input[CONF_USERNAME], data=user_input)
+                return self.async_create_entry(title=user_input[CONF_USERNAME], data=user_input)
             self._errors["base"] = "auth"
             return await self._show_config_form(user_input)
 

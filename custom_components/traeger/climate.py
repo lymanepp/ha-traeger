@@ -27,7 +27,8 @@ async def async_setup_entry(
         async_add_entities([TraegerClimateEntity(client, grill_id, "Climate")])
 
         monitor = TraegerGrillMonitor(
-            client, grill_id, async_add_entities, AccessoryTraegerClimateEntity)
+            client, grill_id, async_add_entities, AccessoryTraegerClimateEntity
+        )
         monitor.attach_monitor()
     return True
 
@@ -191,8 +192,7 @@ class TraegerClimateEntity(TraegerBaseClimate):
         ):
             await self.client.shutdown_grill(self.grill_id)
             return
-        raise NotImplementedError(
-            "Set HVAC mode not supported in current state.")
+        raise NotImplementedError("Set HVAC mode not supported in current state.")
 
 
 class AccessoryTraegerClimateEntity(TraegerBaseClimate):
@@ -201,19 +201,16 @@ class AccessoryTraegerClimateEntity(TraegerBaseClimate):
     def __init__(self, client: traeger, grill_id: str, sensor_id: str) -> None:
         super().__init__(client, grill_id, f"Probe {sensor_id}")
         self.sensor_id = sensor_id
-        self.grill_accessory = self.client.get_details_for_accessory(
-            self.grill_id, self.sensor_id)
+        self.grill_accessory = self.client.get_details_for_accessory(self.grill_id, self.sensor_id)
         self.current_preset_mode = PRESET_NONE
 
         # Tell the Traeger client to call grill_accessory_update() when it gets an update
-        self.client.set_callback_for_grill(
-            self.grill_id, self.grill_accessory_update)
+        self.client.set_callback_for_grill(self.grill_id, self.grill_accessory_update)
 
     def grill_accessory_update(self) -> None:
         """This gets called when the grill has an update. Update state variable"""
         self.grill_refresh_state()
-        self.grill_accessory = self.client.get_details_for_accessory(
-            self.grill_id, self.sensor_id)
+        self.grill_accessory = self.client.get_details_for_accessory(self.grill_id, self.sensor_id)
 
         if self.hass is None:
             return
